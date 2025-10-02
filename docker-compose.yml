@@ -1,0 +1,122 @@
+services:
+  db:
+    container_name: db
+    build:
+      context: ./DB        
+      dockerfile: Dockerfile
+    image: pragmeter/pragmeter-db:2025.09.25
+    environment:
+      POSTGRES_DB: PrgDB
+      POSTGRES_USER: prgadmin
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prgadmin} -d ${POSTGRES_DB:-PrgDB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    networks: [appnet]
+    
+  migrator:
+    container_name: mig
+    build:
+      context: ./MIGRATOR
+      dockerfile: Dockerfile
+    image: pragmeter/pragmeter-mig:2025.09.25
+    platform: linux/amd64
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: PrgDB
+      DB_USER: prgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    networks: [appnet]
+
+  api:
+    container_name: api
+    build:
+      context: ./API
+      dockerfile: Dockerfile
+    image: pragmeter/pragmeter-api:2025.09.25
+    platform: linux/amd64
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: PrgDB
+      DB_USER: prgadmin
+    depends_on:
+      db:
+        condition: service_healthy
+      migrator:                    
+        condition: service_completed_successfully
+    expose:
+      - "8000"
+    ports:
+      - "0.0.0.0:7000:8000"
+    networks: [appnet]
+
+  be:
+    container_name: be
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
+    image: pragmeter/pragmeter-be:2025.09.25
+    platform: linux/amd64
+    environment:
+      API_URL: http://api:8000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: PrgDB
+      DB_USER: prgadmin
+    depends_on:
+      - db
+    ports:
+      - "8008:8008"
+    expose:
+      - "8008"      # internal only
+    networks: [appnet]
+
+  fe:
+    container_name: fe
+    build:
+      context: ./FE
+      dockerfile: Dockerfile
+    image: pragmeter/pragmeter-fe:2025.09.25
+    platform: linux/amd64
+    environment:
+      VITE_API_URL: /api
+    depends_on:
+      - api
+    ports:
+      - "80:3001"   # users connect only to FE
+    networks: [appnet]
+      
+  redis:
+    container_name: redis
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly yes
+      - --appendfsync everysec
+      - --aof-use-rdb-preamble yes
+      - --maxmemory 2gb
+      - --maxmemory-policy allkeys-lru
+      - --save "900 1"
+      - --save "300 10"
+      - --save "60 10000"
+    volumes:
+      - redisdata:/data
+    networks: [appnet]
+    expose:
+      - "6379"
+
+networks:
+  appnet: {}
+
+volumes:
+  dbdata:
+  redisdata:
