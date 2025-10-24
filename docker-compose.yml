@@ -1,35 +1,31 @@
+name: pragmeter
+
 services:
   db:
     container_name: db
-    build:
-      context: ./DB        
-      dockerfile: Dockerfile
-    image: pragmeter/pragmeter-db:2025.09.25
+    image: pragmeter/pragmeter-db:${IMAGE_TAG}
+    restart: unless-stopped
     environment:
       POSTGRES_DB: PrgDB
       POSTGRES_USER: prgadmin
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
-      - dbdata:/var/lib/postgresql/data
+      - "dbdata:/var/lib/postgresql/data"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prgadmin} -d ${POSTGRES_DB:-PrgDB}"]
       interval: 5s
       timeout: 5s
       retries: 15
     networks: [appnet]
-    
+
   migrator:
     container_name: mig
-    build:
-      context: ./MIGRATOR
-      dockerfile: Dockerfile
-    image: pragmeter/pragmeter-mig:2025.09.25
-    platform: linux/amd64
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-mig:${IMAGE_TAG}
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: PrgDB
-      DB_USER: prgadmin
+      DB_NAME: ${POSTGRES_DB:-PrgDB}
+      DB_USER: ${POSTGRES_USER:-prgadmin}
     depends_on:
       db:
         condition: service_healthy
@@ -38,81 +34,111 @@ services:
 
   api:
     container_name: api
-    build:
-      context: ./API
-      dockerfile: Dockerfile
-    image: pragmeter/pragmeter-api:2025.09.25
-    platform: linux/amd64
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-api:${IMAGE_TAG}
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: PrgDB
-      DB_USER: prgadmin
+      DB_NAME: ${POSTGRES_DB:-PrgDB}
+      DB_USER: ${POSTGRES_USER:-prgadmin}
     depends_on:
       db:
         condition: service_healthy
-      migrator:                    
-        condition: service_completed_successfully
-    expose:
-      - "8000"
-    ports:
-      - "0.0.0.0:7000:8000"
+    ports: ["7000:8000"]
     networks: [appnet]
 
   be:
     container_name: be
-    build:
-      context: ./BE
-      dockerfile: Dockerfile
-    image: pragmeter/pragmeter-be:2025.09.25
-    platform: linux/amd64
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-be:${IMAGE_TAG}
     environment:
       API_URL: http://api:8000
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_NAME: PrgDB
-      DB_USER: prgadmin
     depends_on:
-      - db
-    ports:
-      - "8008:8008"
-    expose:
-      - "8008"      # internal only
+      api:
+        condition: service_started
+    ports: ["8008:8008"]
+    expose: ["8008"]
     networks: [appnet]
 
   fe:
     container_name: fe
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-fe:${IMAGE_TAG}
     build:
       context: ./FE
       dockerfile: Dockerfile
-    image: pragmeter/pragmeter-fe:2025.09.25
-    platform: linux/amd64
     environment:
       VITE_API_URL: /api
-    depends_on:
-      - api
-    ports:
-      - "80:3001"   # users connect only to FE
+      VITE_RUN_UNDER_HTTPS: "true"
+    depends_on: [api]
+    expose:
+      - "80"   # internal; Traefik accepts 443
     networks: [appnet]
-      
+    labels:
+      - "traefik.enable=true"
+      # HTTP (80) → redirect to HTTPS
+      - "traefik.http.routers.fe-http.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.fe-http.entrypoints=web"
+      - "traefik.http.routers.fe-http.middlewares=redirect-to-https"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+      # HTTPS (443)
+      - "traefik.http.routers.fe-https.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.fe-https.entrypoints=websecure"
+      - "traefik.http.routers.fe-https.tls=true"
+      - "traefik.http.routers.fe-https.tls.certresolver=${LE_RESOLVER}"
+      - "traefik.http.services.fe.loadbalancer.server.port=80"
+
+  # ──────────────────────────
+  # Traefik reverse proxy + ACME (DNS-01 Cloudflare active)
+  # ──────────────────────────
+  traefik:
+    image: traefik:v3.1
+    container_name: reverse-proxy
+    restart: unless-stopped
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.le-dns01.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.le-dns01.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.le-dns01.acme.dnschallenge.provider=cloudflare"
+
+    ports:
+      - "0.0.0.0:80:80"
+      - "0.0.0.0:443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
+    networks: [appnet]
+
   redis:
     container_name: redis
-    image: redis:7-alpine
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-redis:${IMAGE_TAG}
     command:
       - redis-server
-      - --appendonly yes
-      - --appendfsync everysec
-      - --aof-use-rdb-preamble yes
-      - --maxmemory 2gb
-      - --maxmemory-policy allkeys-lru
-      - --save "900 1"
-      - --save "300 10"
-      - --save "60 10000"
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --aof-use-rdb-preamble
+      - "yes"
+      - --maxmemory
+      - 2gb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --save
+      - "900"
+      - "1"
+      - --save
+      - "300"
+      - "10"
+      - --save
+      - "60"
+      - "10000"
     volumes:
-      - redisdata:/data
+      - ./redisdata:/data
+    expose: ["6379"]
     networks: [appnet]
-    expose:
-      - "6379"
 
 networks:
   appnet: {}
@@ -120,3 +146,4 @@ networks:
 volumes:
   dbdata:
   redisdata:
+  letsencrypt:
