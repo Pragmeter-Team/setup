@@ -51,6 +51,7 @@ services:
     image: ${DOCKER_NS:-pragmeter}/pragmeter-be:${IMAGE_TAG}
     environment:
       API_URL: http://api:8000
+      JOBS_API_URL: http://be:8008
     depends_on:
       api:
         condition: service_started
@@ -66,6 +67,7 @@ services:
       dockerfile: Dockerfile
     environment:
       VITE_API_URL: /api
+      VITE_JOBS_API_URL: /be
       VITE_RUN_UNDER_HTTPS: "true"
     depends_on: [api]
     expose:
