@@ -1,7 +1,10 @@
 name: pragmeter
+x-pull-policy: &pull_always
+  pull_policy: always
 
 services:
   db:
+    <<: *pull_always
     container_name: db
     image: pragmeter/pragmeter-db:${IMAGE_TAG}
     restart: unless-stopped
@@ -19,6 +22,7 @@ services:
     networks: [appnet]
 
   migrator:
+    <<: *pull_always
     container_name: mig
     image: ${DOCKER_NS:-pragmeter}/pragmeter-mig:${IMAGE_TAG}
     environment:
@@ -33,6 +37,7 @@ services:
     networks: [appnet]
 
   api:
+    <<: *pull_always
     container_name: api
     image: ${DOCKER_NS:-pragmeter}/pragmeter-api:${IMAGE_TAG}
     environment:
@@ -47,6 +52,7 @@ services:
     networks: [appnet]
 
   be:
+    <<: *pull_always
     container_name: be
     image: ${DOCKER_NS:-pragmeter}/pragmeter-be:${IMAGE_TAG}
     environment:
@@ -60,6 +66,7 @@ services:
     networks: [appnet]
 
   fe:
+    <<: *pull_always
     container_name: fe
     image: ${DOCKER_NS:-pragmeter}/pragmeter-fe:${IMAGE_TAG}
     build:
@@ -91,6 +98,7 @@ services:
   # Traefik reverse proxy + ACME (DNS-01 Cloudflare active)
   # ──────────────────────────
   traefik:
+    <<: *pull_always
     image: traefik:v3.1
     container_name: reverse-proxy
     restart: unless-stopped
@@ -114,6 +122,7 @@ services:
     networks: [appnet]
 
   redis:
+    <<: *pull_always
     container_name: redis
     image: ${DOCKER_NS:-pragmeter}/pragmeter-redis:${IMAGE_TAG}
     command:
