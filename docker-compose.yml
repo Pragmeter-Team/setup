@@ -1,4 +1,5 @@
 name: pragmeter
+
 x-pull-policy: &pull_always
   pull_policy: always
 
@@ -6,14 +7,14 @@ services:
   db:
     <<: *pull_always
     container_name: db
-    image: pragmeter/pragmeter-db:${IMAGE_TAG}
+    image: ${DOCKER_NS:-pragmeter}/pragmeter-db:${IMAGE_TAG}
     restart: unless-stopped
     environment:
-      POSTGRES_DB: PrgDB
-      POSTGRES_USER: prgadmin
+      POSTGRES_DB: ${POSTGRES_DB:-PrgDB}
+      POSTGRES_USER: ${POSTGRES_USER:-prgadmin}
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
-      - "dbdata:/var/lib/postgresql/data"
+      - dbdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prgadmin} -d ${POSTGRES_DB:-PrgDB}"]
       interval: 5s
@@ -30,6 +31,7 @@ services:
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-PrgDB}
       DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_PASSWORD: ""
     depends_on:
       db:
         condition: service_healthy
@@ -45,10 +47,12 @@ services:
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB:-PrgDB}
       DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_PASSWORD: ""
     depends_on:
       db:
         condition: service_healthy
-    ports: ["7000:8000"]
+    ports:
+      - "7000:8000"
     networks: [appnet]
 
   be:
@@ -58,11 +62,18 @@ services:
     environment:
       API_URL: http://api:8000
       JOBS_API_URL: http://be:8008
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-PrgDB}
+      DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_PASSWORD: ""
     depends_on:
       api:
         condition: service_started
-    ports: ["8008:8008"]
-    expose: ["8008"]
+    ports:
+      - "8008:8008"
+    expose:
+      - "8008"
     networks: [appnet]
 
   fe:
@@ -73,30 +84,29 @@ services:
       context: ./FE
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: /api
-      VITE_JOBS_API_URL: /be
-      VITE_RUN_UNDER_HTTPS: "true"
+      VITE_API_URL: ${VITE_API_URL:-/api}
+      VITE_JOBS_API_URL: ${VITE_JOBS_API_URL:-/be}
+      VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS:-true}
     depends_on: [api]
     expose:
-      - "80"   # internal; Traefik accepts 443
+      - "80"
     networks: [appnet]
     labels:
       - "traefik.enable=true"
-      # HTTP (80) → redirect to HTTPS
+
+      # HTTP router (no redirect to HTTPS; always available)
       - "traefik.http.routers.fe-http.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.fe-http.entrypoints=web"
-      - "traefik.http.routers.fe-http.middlewares=redirect-to-https"
-      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
-      # HTTPS (443)
+
+      # HTTPS router (active only if a cert is issued)
       - "traefik.http.routers.fe-https.rule=Host(`${DOMAIN}`)"
       - "traefik.http.routers.fe-https.entrypoints=websecure"
       - "traefik.http.routers.fe-https.tls=true"
       - "traefik.http.routers.fe-https.tls.certresolver=${LE_RESOLVER}"
+
+      # FE service port
       - "traefik.http.services.fe.loadbalancer.server.port=80"
 
-  # ──────────────────────────
-  # Traefik reverse proxy + ACME (DNS-01 Cloudflare active)
-  # ──────────────────────────
   traefik:
     <<: *pull_always
     image: traefik:v3.1
@@ -107,10 +117,9 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.le-dns01.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.le-dns01.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.le-dns01.acme.dnschallenge.provider=cloudflare"
-
+      - "--certificatesresolvers.${LE_RESOLVER}.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.${LE_RESOLVER}.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.${LE_RESOLVER}.acme.dnschallenge.provider=cloudflare"
     ports:
       - "0.0.0.0:80:80"
       - "0.0.0.0:443:443"
@@ -148,7 +157,8 @@ services:
       - "10000"
     volumes:
       - ./redisdata:/data
-    expose: ["6379"]
+    expose:
+      - "6379"
     networks: [appnet]
 
 networks:
