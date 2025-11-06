@@ -10,13 +10,13 @@ services:
     image: ${DOCKER_NS}/pragmeter-db:${IMAGE_TAG}
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-PrgDB}
-      POSTGRES_USER: ${POSTGRES_USER:-prgadmin}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-prgadmin} -d ${POSTGRES_DB:-PrgDB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 15
@@ -29,8 +29,8 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-PrgDB}
-      DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ""
     depends_on:
       db:
@@ -45,8 +45,8 @@ services:
     environment:
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-PrgDB}
-      DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ""
     depends_on:
       db:
@@ -64,8 +64,8 @@ services:
       JOBS_API_URL: http://be:8008
       DB_HOST: db
       DB_PORT: 5432
-      DB_NAME: ${POSTGRES_DB:-PrgDB}
-      DB_USER: ${POSTGRES_USER:-prgadmin}
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ""
     depends_on:
       api:
@@ -84,9 +84,9 @@ services:
       context: ./FE
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: ${VITE_API_URL:-/api}
-      VITE_JOBS_API_URL: ${VITE_JOBS_API_URL:-/be}
-      VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS:-true}
+      VITE_API_URL: ${VITE_API_URL}
+      VITE_JOBS_API_URL: ${VITE_JOBS_API_URL}
+      VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS}
     depends_on: [api]
     expose:
       - "80"
