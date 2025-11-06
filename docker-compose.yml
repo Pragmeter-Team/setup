@@ -7,7 +7,7 @@ services:
   db:
     <<: *pull_always
     container_name: db
-    image: ${DOCKER_NS}/pragmeter-db:${IMAGE_TAG}
+    image: pragmeter/pragmeter-db:${IMAGE_TAG}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
@@ -25,7 +25,7 @@ services:
   migrator:
     <<: *pull_always
     container_name: mig
-    image: ${DOCKER_NS}/pragmeter-mig:${IMAGE_TAG}
+    image: pragmeter/pragmeter-mig:${IMAGE_TAG}
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -41,7 +41,7 @@ services:
   api:
     <<: *pull_always
     container_name: api
-    image: ${DOCKER_NS}/pragmeter-api:${IMAGE_TAG}
+    image: pragmeter/pragmeter-api:${IMAGE_TAG}
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -58,7 +58,7 @@ services:
   be:
     <<: *pull_always
     container_name: be
-    image: ${DOCKER_NS}/pragmeter-be:${IMAGE_TAG}
+    image: pragmeter/pragmeter-be:${IMAGE_TAG}
     environment:
       API_URL: http://api:8000
       JOBS_API_URL: http://be:8008
@@ -79,7 +79,7 @@ services:
   fe:
     <<: *pull_always
     container_name: fe
-    image: ${DOCKER_NS}/pragmeter-fe:${IMAGE_TAG}
+    image: pragmeter/pragmeter-fe:${IMAGE_TAG}
     build:
       context: ./FE
       dockerfile: Dockerfile
@@ -133,7 +133,7 @@ services:
   redis:
     <<: *pull_always
     container_name: redis
-    image: ${DOCKER_NS}/pragmeter-redis:${IMAGE_TAG}
+    image: pragmeter/pragmeter-redis:${IMAGE_TAG}
     command:
       - redis-server
       - --appendonly
