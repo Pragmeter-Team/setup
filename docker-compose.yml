@@ -161,6 +161,21 @@ services:
       - "6379"
     networks: [appnet]
 
+  # -------------------------------------------------------------
+  # WATCHTOWER (auto-update containers + NO CACHE pull)
+  # -------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_PULL_POLICY=always
+      - WATCHTOWER_CLEANUP=true
+    command: --interval 60
+    networks: [appnet]
+
 networks:
   appnet: {}
 
