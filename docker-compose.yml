@@ -165,8 +165,8 @@ services:
   # WATCHTOWER (auto-update containers + NO CACHE pull)
   # -------------------------------------------------------------
   watchtower:
-    image: pragmeter/watchtower
     container_name: watchtower
+    image: pragmeter/watchtower:${IMAGE_TAG}
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
