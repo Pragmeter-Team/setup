@@ -165,7 +165,7 @@ services:
   # WATCHTOWER (auto-update containers + NO CACHE pull)
   # -------------------------------------------------------------
   watchtower:
-    image: containrrr/watchtower
+    image: pragmeter/watchtower
     container_name: watchtower
     restart: unless-stopped
     volumes:
