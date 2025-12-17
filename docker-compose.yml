@@ -1,18 +1,19 @@
-name: pragmeter
-
-x-pull-policy: &pull_always
-  pull_policy: always
+name: pragmeter-test
 
 services:
   db:
-    <<: *pull_always
     container_name: db
-    image: pragmeter/pragmeter-db:${IMAGE_TAG}
+    image: pragmeter/oragmeter-db:${IMAGE_TAG}
+    build:
+      context: ./DB
+      dockerfile: Dockerfile
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
     volumes:
       - dbdata:/var/lib/postgresql/data
     healthcheck:
@@ -23,9 +24,11 @@ services:
     networks: [appnet]
 
   migrator:
-    <<: *pull_always
     container_name: mig
-    image: pragmeter/pragmeter-mig:${IMAGE_TAG}
+    image: pragmeter/oragmeter-mig:${IMAGE_TAG}
+    build:
+      context: ./MIGRATOR
+      dockerfile: Dockerfile
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -39,28 +42,35 @@ services:
     networks: [appnet]
 
   api:
-    <<: *pull_always
     container_name: api
-    image: pragmeter/pragmeter-api:${IMAGE_TAG}
+    image: pragmeter/oragmeter-api:${IMAGE_TAG}
+    build:
+      context: ./API
+      dockerfile: Dockerfile
     environment:
       DB_HOST: db
       DB_PORT: 5432
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ""
+    working_dir: /app
+    volumes:
+      - ./config.json:/app/config.json:ro
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "7000:8000"
+      - "7000:7000"
     networks: [appnet]
 
   be:
-    <<: *pull_always
     container_name: be
-    image: pragmeter/pragmeter-be:${IMAGE_TAG}
+    image: pragmeter/oragmeter-be:${IMAGE_TAG}
+    build:
+      context: ./BE
+      dockerfile: Dockerfile
     environment:
-      API_URL: http://api:8000
+      API_URL: http://api:7000
       JOBS_API_URL: http://be:8008
       DB_HOST: db
       DB_PORT: 5432
@@ -70,45 +80,24 @@ services:
     depends_on:
       api:
         condition: service_started
+    volumes:
+      - ./config.json:/app/config.json:ro
     ports:
       - "8008:8008"
-    expose:
-      - "8008"
     networks: [appnet]
 
   fe:
-    <<: *pull_always
     container_name: fe
-    image: pragmeter/pragmeter-fe:${IMAGE_TAG}
+    image: pragmeter/oragmeter-fe:${IMAGE_TAG}
     build:
       context: ./FE
       dockerfile: Dockerfile
-    environment:
-      VITE_API_URL: ${VITE_API_URL}
-      VITE_JOBS_API_URL: ${VITE_JOBS_API_URL}
-      VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS}
-    depends_on: [api]
-    expose:
-      - "80"
+    depends_on: [api, be]
+    ports:
+      - "8080:80"
     networks: [appnet]
-    labels:
-      - "traefik.enable=true"
-
-      # HTTP router (no redirect to HTTPS; always available)
-      - "traefik.http.routers.fe-http.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.fe-http.entrypoints=web"
-
-      # HTTPS router (active only if a cert is issued)
-      - "traefik.http.routers.fe-https.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.fe-https.entrypoints=websecure"
-      - "traefik.http.routers.fe-https.tls=true"
-      - "traefik.http.routers.fe-https.tls.certresolver=${LE_RESOLVER}"
-
-      # FE service port
-      - "traefik.http.services.fe.loadbalancer.server.port=80"
 
   traefik:
-    <<: *pull_always
     image: traefik:v3.1
     container_name: reverse-proxy
     restart: unless-stopped
@@ -117,23 +106,19 @@ services:
       - "--providers.docker.exposedbydefault=false"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
-      - "--certificatesresolvers.${LE_RESOLVER}.acme.email=${ACME_EMAIL}"
-      - "--certificatesresolvers.${LE_RESOLVER}.acme.storage=/letsencrypt/acme.json"
-      - "--certificatesresolvers.${LE_RESOLVER}.acme.dnschallenge.provider=cloudflare"
     ports:
-      - "0.0.0.0:80:80"
-      - "0.0.0.0:443:443"
+      - "80:80"
+      - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - letsencrypt:/letsencrypt
-    environment:
-      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
     networks: [appnet]
 
   redis:
-    <<: *pull_always
     container_name: redis
-    image: pragmeter/pragmeter-redis:${IMAGE_TAG}
+    image: pragmeter/oragmeter-redis:${IMAGE_TAG}
+    build:
+      context: ./REDIS
+      dockerfile: Dockerfile
     command:
       - redis-server
       - --appendonly
@@ -161,25 +146,8 @@ services:
       - "6379"
     networks: [appnet]
 
-  # -------------------------------------------------------------
-  # WATCHTOWER (auto-update containers + NO CACHE pull)
-  # -------------------------------------------------------------
-  watchtower:
-    container_name: watchtower
-    image: containrrr/watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - WATCHTOWER_PULL_POLICY=always
-      - WATCHTOWER_CLEANUP=true
-    command: --interval 60
-    networks: [appnet]
-
 networks:
   appnet: {}
 
 volumes:
   dbdata:
-  redisdata:
-  letsencrypt:
