@@ -1,4 +1,4 @@
-name: pragmeter-prod
+name: pragmeter-test
 
 services:
   db:
