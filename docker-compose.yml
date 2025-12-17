@@ -60,7 +60,7 @@ services:
       db:
         condition: service_healthy
     ports:
-      - "7000:7000"
+      - "8000:8000"
     networks: [appnet]
 
   be:
@@ -70,7 +70,7 @@ services:
       context: ./BE
       dockerfile: Dockerfile
     environment:
-      API_URL: http://api:7000
+      API_URL: http://api:8000
       JOBS_API_URL: http://be:8008
       DB_HOST: db
       DB_PORT: 5432
