@@ -1,9 +1,9 @@
-name: pragmeter-prod
+name: pragmeter-test
 
 services:
   db:
     container_name: db
-    image: pragmeter/oragmeter-db:${IMAGE_TAG}
+    image: pragmeter/pragmeter-db:${IMAGE_TAG}
     build:
       context: ./DB
       dockerfile: Dockerfile
@@ -25,7 +25,7 @@ services:
 
   migrator:
     container_name: mig
-    image: pragmeter/oragmeter-mig:${IMAGE_TAG}
+    image: pragmeter/pragmeter-mig:${IMAGE_TAG}
     build:
       context: ./MIGRATOR
       dockerfile: Dockerfile
@@ -43,7 +43,7 @@ services:
 
   api:
     container_name: api
-    image: pragmeter/oragmeter-api:${IMAGE_TAG}
+    image: pragmeter/pragmeter-api:${IMAGE_TAG}
     build:
       context: ./API
       dockerfile: Dockerfile
@@ -65,7 +65,7 @@ services:
 
   be:
     container_name: be
-    image: pragmeter/oragmeter-be:${IMAGE_TAG}
+    image: pragmeter/pragmeter-be:${IMAGE_TAG}
     build:
       context: ./BE
       dockerfile: Dockerfile
@@ -88,7 +88,7 @@ services:
 
   fe:
     container_name: fe
-    image: pragmeter/oragmeter-fe:${IMAGE_TAG}
+    image: pragmeter/pragmeter-fe:${IMAGE_TAG}
     build:
       context: ./FE
       dockerfile: Dockerfile
@@ -115,7 +115,7 @@ services:
 
   redis:
     container_name: redis
-    image: pragmeter/oragmeter-redis:${IMAGE_TAG}
+    image: pragmeter/pragmeter-redis:${IMAGE_TAG}
     build:
       context: ./REDIS
       dockerfile: Dockerfile
