@@ -94,7 +94,7 @@ services:
       dockerfile: Dockerfile
     depends_on: [api, be]
     ports:
-      - "8080:80"
+      - "80:80"
     networks: [appnet]
 
   traefik:
