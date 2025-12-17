@@ -1,0 +1,8 @@
+{
+    "db_host": "localhost",
+    "db_port": 5432,
+    "db_user": "prgadmin",
+    "db_password_encrypted": "qCZgctjHxx0KVaKeeOwB8w0fxdIs48rnaODY4dxhlge3SlLEs5Clnad6EXpRDAzkZl4mCQSFKLIsJIMeBQ==",
+    "db_name": "PrgDB",
+    "api_port": 7000
+}
