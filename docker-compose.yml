@@ -1,4 +1,4 @@
-name: pragmeter-test
+name: pragmeter-prod
 
 services:
   db:
@@ -93,24 +93,10 @@ services:
       context: ./FE
       dockerfile: Dockerfile
     depends_on: [api, be]
-    ports:
-      - "80:80"
-    networks: [appnet]
-
-  traefik:
-    image: traefik:v3.1
-    container_name: reverse-proxy
-    restart: unless-stopped
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config.json:/app/config.json:ro
+    ports:
+      - "80:80"
     networks: [appnet]
 
   redis:
