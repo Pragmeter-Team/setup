@@ -97,8 +97,6 @@ services:
         VITE_JOBS_API_URL: ${VITE_JOBS_API_URL}
         VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS}
     depends_on: [api, be]
-    volumes:
-      - ./config.json:/app/config.json:ro
     ports:
       - "80:80"
     networks: [appnet]
