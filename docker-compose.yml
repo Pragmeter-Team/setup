@@ -98,7 +98,7 @@ services:
         VITE_RUN_UNDER_HTTPS: ${VITE_RUN_UNDER_HTTPS}
     depends_on: [api, be]
     volumes:
-      - ./config.json:/app/web-ui/config.json:ro
+      - ./config.json:/app/config.json:ro
     ports:
       - "80:80"
     networks: [appnet]
