@@ -4,10 +4,11 @@
     "db_port": 5432,
     "db_name": "PrgDB",
     "db_user": "prgadmin",
-    "db_password_encrypted": "qDZgctjHxx0KVaKeeOwB8w0fxdIs48rnaODY4dxhlge3SlLEs5Clnad6EXpRDAzkZl4mCQSFKLIsJIMeBQ==",
+    "db_password_encrypted": "qCZgctjHxx0KVaKeeOwB8w0fxdIs48rnaODY4dxhlge3SlLEs5Clnad6EXpRDAzkZl4mCQSFKLIsJIMeBQ==",
     "api_url": "http://app.pragmeter.com",
 	"api_port": 8000,
 	"scheduler_port": 8008
 }
+
 
 
