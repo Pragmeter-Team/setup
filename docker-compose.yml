@@ -144,9 +144,6 @@ services:
       - ollamadata:/root/.ollama
     expose:
       - "11434"
-    # не публикувай порт навън, ако не ти трябва отвън
-    # ports:
-    #   - "11434:11434"
     networks: [appnet]
 
   ollama-init:
