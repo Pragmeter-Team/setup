@@ -7,8 +7,11 @@
     "db_password_encrypted": "qCZgctjHxx0KVaKeeOwB8w0fxdIs48rnaODY4dxhlge3SlLEs5Clnad6EXpRDAzkZl4mCQSFKLIsJIMeBQ==",
     "api_url": "http://app.pragmeter.com",
 	"api_port": 8000,
-	"scheduler_port": 8008
+	"scheduler_port": 8008,
+	"llm_url": "http://ollama:11434",
+	"llm_model": "paraphrase-multilingual"
 }
+
 
 
 
