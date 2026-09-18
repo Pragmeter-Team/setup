@@ -65,6 +65,7 @@ services:
 
   be:
     container_name: be
+    restart: unless-stopped
     image: pragmeter/pragmeter-be:${IMAGE_TAG}
     build:
       context: ./BE
